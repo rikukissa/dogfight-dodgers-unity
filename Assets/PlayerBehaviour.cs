@@ -26,7 +26,7 @@ public class PlayerBehaviour : MonoBehaviour {
 	private float radian = Mathf.PI * 2;
 	public int tick = 0;
 
-	public float doubleTapInterval = 0.5f;
+	public float doubleTapInterval = 0.3f;
 
 	private int timesTapped = 0;
 	private bool wasTapped = false;
@@ -43,10 +43,6 @@ public class PlayerBehaviour : MonoBehaviour {
 	float Mod(float x, float m) {
 		return (x % m + m) % m;
 	}
-	// Use this for initialization
-	void Start () {
-
-	}
 	void FixedUpdate () {
 		// Debug.Log(Application.isEditor);
 		if(ghost) {
@@ -55,13 +51,13 @@ public class PlayerBehaviour : MonoBehaviour {
 		DoUpdate(Time.deltaTime);
 	}
 	private bool isDoubleTapped() {
-				// Double tap handling
-		if(Input.GetButton("Throttle")) {
-      if(timesTapped == 0) {
+		if(isTouching()) {
+      if(timesTapped == 0 && doubleTapInterval < 0) {
 				timesTapped = 1;
-        doubleTapInterval = 0.5f;
+        doubleTapInterval = 0.3f;
 			} else if(!wasTapped && timesTapped == 1 && doubleTapInterval > 0) {
 				timesTapped = 0;
+				doubleTapInterval = 0.3f;
 				return true;
 			}
 		} else if(doubleTapInterval < 0) {
@@ -69,12 +65,37 @@ public class PlayerBehaviour : MonoBehaviour {
 		}
 
 		doubleTapInterval -= 1 * Time.deltaTime;
-		wasTapped = Input.GetButton("Throttle");
+		wasTapped = isTouching();
 		return false;
 	}
-	// Update is called once per frame
+
+	private bool isMobile() {
+		return Application.platform == RuntimePlatform.IPhonePlayer && Input.touchCount > 0;
+	}
+	private bool isTouching() {
+		if(isMobile()) {
+			return Input.touchCount > 0;
+		}
+
+		return Input.GetButton("Throttle");
+	}
+	private Vector2 getTouchPosition() {
+		if(isMobile()) {
+			return Input.GetTouch(0).position;
+		}
+		return new Vector2(0, 0);
+	}
+
+	void OnTriggerEnter2D(Collider2D other) {
+		Debug.Log("player");
+	}
+	void OnCollisionEnter2D(Collision2D collision) {
+		// TODO set speed to 0
+	}
 	public void DoUpdate (float delta) {
 		tick++;
+
+		bool touching = isTouching();
 
 		position = transform.position;
 
@@ -83,17 +104,12 @@ public class PlayerBehaviour : MonoBehaviour {
 		}
 
 		if(
-			(Application.isPlaying && Input.GetButton("Throttle")) ||
+			(Application.isPlaying && touching) ||
 			(!Application.isPlaying && tick < 2320)
 		) {
 			throttle = 1;
 		} else {
 			throttle = 0;
-		}
-
-		if(position.y <= 0) {
-			vy = 0;
-			position.y = 0;
 		}
 
 		float radAngle = (angle + 90) * Mathf.Deg2Rad;
@@ -110,13 +126,13 @@ public class PlayerBehaviour : MonoBehaviour {
 		vx = Mathf.Sin(radAngle) * speed * delta;
 		vy = Mathf.Cos(radAngle) * speed * delta;
 
-
 		angle = Mod(angle, 360);
 
 		bool shouldIncreaseAngle = speed > 300 && throttle == 1;
 
 		if(shouldIncreaseAngle) {
 			int direction = upsideDown ? -1 : 1;
+
 			angle += (angleChangeSpeed * (speed / maxSpeed)) * direction * delta;
 		}
 
