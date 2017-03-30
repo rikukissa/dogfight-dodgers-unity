@@ -1,14 +1,13 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+using UnityEngine.SceneManagement;
 public class PlayerBehaviour : MonoBehaviour {
 
 	Vector3 position;
+	public GameObject boundaries;
+	private Bounds bounds;
 	public float throttle = 0;
-	public float vx = 0;
-	public float vy = 0;
-
 	public float angle = 0;
 	public float speed = 0;
 	public float airResistance = 0.995f;
@@ -34,6 +33,10 @@ public class PlayerBehaviour : MonoBehaviour {
 	private bool upsideDown = false;
 	private float flippingVelocity;
 	public float flippingTime;
+
+	private System.DateTime startTime;
+
+	private Rigidbody2D body;
 	float Distance(float alpha, float beta) {
 		float phi = Mathf.Abs(beta - alpha) % radian;
 		float distance = phi > radian / 2 ? radian - phi : phi;
@@ -85,19 +88,64 @@ public class PlayerBehaviour : MonoBehaviour {
 		}
 		return new Vector2(0, 0);
 	}
+	void Start() {
+		startTime = System.DateTime.Now;
+		bounds = boundaries.GetComponent<SpriteRenderer>().bounds;
+		body = GetComponent<Rigidbody2D>();
+	}
+	void SaveScore() {
+		int total = (int)(System.DateTime.Now - startTime).TotalMilliseconds;
+		int current = PlayerPrefs.GetInt("record", total);
 
+		if(current >= total) {
+			PlayerPrefs.SetInt("record", total);
+		}
+	}
 	void OnTriggerEnter2D(Collider2D other) {
-		Debug.Log("player");
+		if(other.gameObject.tag == "Finish") {
+			this.SaveScore();
+			this.StartNewRound();
+		}
+	}
+	void StartNewRound() {
+		Scene scene = SceneManager.GetActiveScene();
+		SceneManager.LoadScene(scene.name);
+	}
+	void CollidedWithGround(Collision2D collision) {
+		if(Mathf.Abs(collision.relativeVelocity.x) > 5 || Mathf.Abs(collision.relativeVelocity.y) > 5) {
+			this.StartNewRound();
+		}
+
 	}
 	void OnCollisionEnter2D(Collision2D collision) {
-		// TODO set speed to 0
+		if(collision.gameObject.tag == "Ground") {
+			this.CollidedWithGround(collision);
+		}
 	}
+	bool InBounds(Vector3 position) {
+		return position.x > bounds.min.x &&
+			position.x < bounds.max.x &&
+			position.y > bounds.min.y &&
+			position.y < bounds.max.y;
+	}
+
 	public void DoUpdate (float delta) {
+
 		tick++;
+
 
 		bool touching = isTouching();
 
-		position = transform.position;
+		float vx = body.velocity.x;
+		float vy = body.velocity.y;
+		position = body.position;
+
+		if(!this.InBounds(position)) {
+			this.StartNewRound();
+			return;
+		}
+
+		Vector2 velocity = body.velocity;
 
 		if(isDoubleTapped()) {
 			upsideDown = !upsideDown;
@@ -124,7 +172,7 @@ public class PlayerBehaviour : MonoBehaviour {
 
 		// Directional forces
 		vx = Mathf.Sin(radAngle) * speed * delta;
-		vy = Mathf.Cos(radAngle) * speed * delta;
+		vy = Mathf.Cos(radAngle) * speed * delta * -1;
 
 		angle = Mod(angle, 360);
 
@@ -144,19 +192,26 @@ public class PlayerBehaviour : MonoBehaviour {
 			}
 		}
 
-		// gravity
-		vy += gravity * delta;
+		// Gravity
+		vy -= gravity * delta;
 
-		position.x += vx * delta;
-		position.y -= vy * delta;
+		// position.x += vx * delta;
+		// position.y -= vy * delta;
 
+		velocity.x = vx;
+		velocity.y = vy;
+
+
+		// Flip animation
 		Vector3 foo = transform.localScale;
 		foo.y = upsideDown ?
 			Mathf.SmoothDamp(foo.y, -1, ref flippingVelocity, flippingTime) :
 			Mathf.SmoothDamp(foo.y, 1, ref flippingVelocity, flippingTime);
 
 		transform.localScale = foo;
-		transform.position = position;
+		body.velocity = velocity;
+		body.position = position;
+		body.rotation = angle;
 		transform.eulerAngles = new Vector3(0, 0, angle);
 	}
 }

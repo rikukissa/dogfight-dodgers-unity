@@ -68,8 +68,6 @@ public class PlayerFuture : MonoBehaviour {
 			created.transform.eulerAngles = new Vector3(0, 0, plane.transform.eulerAngles.z);
 
 			behaviour.ghost = true;
-			behaviour.vx = planeBehaviour.vx;
-			behaviour.vy = planeBehaviour.vy;
 
 			for(o = 0; o < startStep + steps; o++) {
 				behaviour.DoUpdate(Time.fixedDeltaTime);

@@ -15,7 +15,7 @@ public class SmoothFollow : MonoBehaviour {
     void Start ()
     {
         //Calculate and store the offset value by getting the distance between the player's position and camera's position.
-        offset = transform.position - player.transform.position;
+        // offset = transform.position - player.transform.position;
     }
 
     // LateUpdate is called after Update each frame
@@ -35,11 +35,11 @@ public class SmoothFollow : MonoBehaviour {
         float screenHeight = (cameraLeftTop.y - cameraRightBottom.y) / 2;
 
         // Set the position of the camera's transform to be the same as the player's, but offset by the calculated offset distance.
-        Vector3 newPosition = player.transform.position + offset;
+        Vector3 newPosition = player.transform.position;
         transform.position = new Vector3(
           Mathf.Clamp(newPosition.x, -width / 2 + screenWidth, width / 2 - screenWidth),
           Mathf.Clamp(newPosition.y, -height / 2 + screenHeight, height / 2 - screenHeight),
-          newPosition.z
+          transform.position.z
         );
     }
 }
